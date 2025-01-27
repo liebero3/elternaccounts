@@ -26,6 +26,7 @@ import elternaccounts_credentials
 import mappings
 from utils import similar, returnUsername
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -261,4 +262,11 @@ def createElternaccounts(
         ),
         axis=1,
     )
+    # Check for changes compared to previous version
+    file_exists = os.path.isfile(outputfile)
+    if file_exists:
+        existing_df = pd.read_csv(outputfile, sep=';')
+        if not existing_df.equals(output_df2):
+            logger.info(f"Änderungen in {outputfile} erkannt - Datei wurde aktualisiert")
+    
     output_df2.to_csv(outputfile, index=False, sep=";")

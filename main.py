@@ -40,7 +40,7 @@ def main():
 """
         )
         if user_choice == "1":
-            exportfile = "00-Export20240929.csv"
+            exportfile = "00-Export20250103.csv"
             # API initialisieren
             ncapi = NextcloudFormsAPI(
                 elternaccounts_credentials.server_url,
@@ -107,7 +107,7 @@ def main():
 
         elif user_choice == "2":
             # Mailversand vorbereiten
-            betreff = "WebUntis-Elternaccounts wurden erstellt. (Anleitung beachten!)"
+            betreff = elternaccounts_credentials.mailbetreff
             nachricht = elternaccounts_credentials.mailtext
 
             # Hier die vorher extrahierte E-Mail-Liste einfügen
@@ -133,9 +133,7 @@ HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
             empfaenger_liste = finde_email_adressen(
                 """
 HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
-Rosa Medina rosemedinam@gmail.com Zarauz Rosa rosamedi
-Wiebke Windorf wiebke@windorf.club Windorf Hugo weilwind
-              """
+"""
             )
             logger.info(f"Empfänger-Liste: {empfaenger_liste}")
             logger.info(f"Anzahl der Empfänger: {len(empfaenger_liste)}")
@@ -157,3 +155,4 @@ Wiebke Windorf wiebke@windorf.club Windorf Hugo weilwind
 
 if __name__ == "__main__":
     main()
+
