@@ -53,42 +53,68 @@ def finde_email_adressen(text: str) -> list:
 
 
 def sende_email(
-    empfaenger_liste: list,
-    betreff: str,
-    nachricht: str,
-    smtp_server: str,
-    smtp_port: int,
-    benutzername: str,
-    passwort: str,
+    empfaenger_liste: list = None,
+    betreff: str = None,
+    nachricht: str = None,
+    smtp_server: str = None,
+    smtp_port: int = None,
+    benutzername: str = None,
+    passwort: str = None,
+    bcc: list = None,
+    cc: list = None
 ) -> str:
     """
-    Sends an email to a list of recipients and stores the email in the 'Sent' folder.
+    Sends an email to recipients and stores it in the 'Sent' folder.
 
     Args:
-        empfaenger_liste (list): List of recipient email addresses.
-        betreff (str): Subject of the email.
-        nachricht (str): Body content of the email.
-        smtp_server (str): SMTP server address.
-        smtp_port (int): SMTP server port.
-        benutzername (str): SMTP username for authentication.
-        passwort (str): SMTP password for authentication.
+        empfaenger_liste (list, optional): List of recipient email addresses or single recipient.
+        betreff (str, optional): Subject of the email. Defaults to None.
+        nachricht (str, optional): Body content of the email. Defaults to None.
+        smtp_server (str, optional): SMTP server address. Defaults to credentials.
+        smtp_port (int, optional): SMTP server port. Defaults to credentials.
+        benutzername (str, optional): SMTP username. Defaults to credentials.
+        passwort (str, optional): SMTP password. Defaults to credentials.
+        bcc (list, optional): List of BCC recipients. Defaults to None.
+        cc (list, optional): List of CC recipients. Defaults to None.
 
     Returns:
         str: Result of the email sending operation.
     """
-    if not empfaenger_liste:
+    # Use credential defaults if not specified
+    smtp_server = smtp_server or elternaccounts_credentials.smtp_server
+    smtp_port = smtp_port or elternaccounts_credentials.smtp_port
+    benutzername = benutzername or elternaccounts_credentials.mail_benutzername
+    passwort = passwort or elternaccounts_credentials.mail_passwort
+
+    # Handle single recipient or list
+    if isinstance(empfaenger_liste, str):
+        empfaenger_liste = [empfaenger_liste]
+    
+    if not empfaenger_liste and not bcc:
         return "Keine Empfängeradresse vorhanden."
 
-    empfaenger = benutzername
-    bcc = empfaenger_liste
-
     msg = MIMEMultipart()
-    msg["From"] = elternaccounts_credentials.mail_benutzername
-    msg["To"] = empfaenger
-    msg["Bcc"] = ", ".join(bcc)
-    msg["Subject"] = betreff
+    msg["From"] = benutzername
+    
+    # Handle To field
+    if empfaenger_liste:
+        msg["To"] = ", ".join(empfaenger_liste)
+    else:
+        msg["To"] = benutzername  # Send to self if only BCC
+        
+    # Handle BCC field
+    if bcc:
+        msg["Bcc"] = ", ".join(bcc)
+        
+    # Handle CC field
+    if cc:
+        msg["Cc"] = ", ".join(cc)
+        
+    if betreff:
+        msg["Subject"] = betreff
 
-    msg.attach(MIMEText(nachricht, "plain"))
+    if nachricht:
+        msg.attach(MIMEText(nachricht, "plain"))
 
     try:
         # Verbindung zum SMTP-Server mit SSL

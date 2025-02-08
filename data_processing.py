@@ -18,6 +18,7 @@ Requirements:
 Note:
 Credentials and Nextcloud paths are managed through the elternaccounts_credentials module.
 """
+
 from datetime import datetime
 import pandas as pd
 import openpyxl as px
@@ -25,11 +26,12 @@ from file_operations import put_file
 import elternaccounts_credentials
 import mappings
 from utils import similar, returnUsername
+from email_operations import sende_email
 import logging
 import os
 
+# Add this after the imports and before any function definitions
 logger = logging.getLogger(__name__)
-
 
 NEXTCLOUD_USERNAME = elternaccounts_credentials.username
 NEXTCLOUD_PASSWORD = elternaccounts_credentials.password
@@ -37,12 +39,150 @@ webdav_backup = elternaccounts_credentials.url_elternaccounts_backup
 webdav_share = elternaccounts_credentials.url_elternaccounts_share
 
 
+# def output_missing_csv_rows(csv_df: pd.DataFrame, xlsx_df: pd.DataFrame) -> None:
+#     if "Zeitstempel" in csv_df.columns and "Zeitstempel" in xlsx_df.columns:
+#         columns_to_show = ["Emailadresse des Elternteils", "Klasse des 1. Kindes",
+#                          "Klasse des 2. Kindes", "Klasse des 3. Kindes"]
+#         new_rows = csv_df[~csv_df["Zeitstempel"].isin(xlsx_df["Zeitstempel"])]
+#         subset_rows = new_rows[columns_to_show]
+#         print("Neue Zeilen aus der CSV, die nicht in der XLSX vorhanden sind:")
+#         print(subset_rows)
+#     else:
+#         print(
+#             "Spalte 'Zeitstempel' fehlt in einem der Datensätze. Kein Vergleich durchgeführt."
+#         )
+
+# forms_message += "\n\nVielen Dank für Ihre Kooperation."
+# --- Andere Importe und Funktionen bleiben unverändert ---
+
+
+def output_missing_csv_rows(csv_df: pd.DataFrame, xlsx_df: pd.DataFrame) -> None:
+    if "Zeitstempel" in csv_df.columns and "Zeitstempel" in xlsx_df.columns:
+        import os
+
+        current_dir = os.path.dirname(__file__)
+        try:
+            klassenlehrer_df = pd.read_csv(
+                os.path.join(current_dir, "klassenlehrer.csv"), sep=";"
+            )
+        except Exception as e:
+            logger.error(f"Error loading klassenlehrer.csv: {e}")
+            klassenlehrer_df = pd.DataFrame()
+
+        try:
+            kuerzel_df = pd.read_csv(os.path.join(current_dir, "kuerzel.csv"), sep=";")
+        except Exception as e:
+            logger.error(f"Error loading kuerzel.csv: {e}")
+            kuerzel_df = pd.DataFrame()
+
+        teacher_email = {}
+        if (
+            not kuerzel_df.empty
+            and "kuerzel" in kuerzel_df.columns
+            and "email" in kuerzel_df.columns
+        ):
+            for _, row in kuerzel_df.iterrows():
+                abbrev = str(row["kuerzel"]).strip() if pd.notna(row["kuerzel"]) else ""
+                email = str(row["email"]).strip() if pd.notna(row["email"]) else ""
+                if abbrev:
+                    teacher_email[abbrev] = email
+
+        def get_teacher_emails(klasse_val):
+            if (
+                pd.isna(klasse_val)
+                or not isinstance(klasse_val, str)
+                or klasse_val.strip() == ""
+            ):
+                return ("", "")
+            klasse_val = klasse_val.strip()
+            teacher1_email = ""
+            teacher2_email = ""
+            if not klassenlehrer_df.empty and "Klasse" in klassenlehrer_df.columns:
+                row_match = klassenlehrer_df[
+                    klassenlehrer_df["Klasse"].astype(str).str.strip() == klasse_val
+                ]
+                if not row_match.empty:
+                    teacher1_abbrev = row_match.iloc[0].get("Klassenlehrer1", "")
+                    teacher2_abbrev = row_match.iloc[0].get("Klassenlehrer2", "")
+                    if pd.notna(teacher1_abbrev):
+                        teacher1_abbrev = str(teacher1_abbrev).strip()
+                        teacher1_email = teacher_email.get(teacher1_abbrev, "")
+                    if pd.notna(teacher2_abbrev):
+                        teacher2_abbrev = str(teacher2_abbrev).strip()
+                        teacher2_email = teacher_email.get(teacher2_abbrev, "")
+            return (teacher1_email, teacher2_email)
+
+        new_rows = csv_df[~csv_df["Zeitstempel"].isin(xlsx_df["Zeitstempel"])].copy()
+
+        for i in [1, 2, 3]:
+            class_col = f"Klasse des {i}. Kindes"
+            teacher1_col = f"Klasse {i} Lehrer1 Email"
+            teacher2_col = f"Klasse {i} Lehrer2 Email"
+            if class_col in new_rows.columns:
+                teacher_emails_series = new_rows[class_col].apply(get_teacher_emails)
+                if not teacher_emails_series.empty:
+                    new_rows[teacher1_col], new_rows[teacher2_col] = zip(
+                        *teacher_emails_series
+                    )
+                else:
+                    new_rows[teacher1_col] = []
+                    new_rows[teacher2_col] = []
+
+        display_columns = []
+        if "Emailadresse des Elternteils" in new_rows.columns:
+            display_columns.append("Emailadresse des Elternteils")
+        for i in [1, 2, 3]:
+            class_col = f"Klasse des {i}. Kindes"
+            teacher1_col = f"Klasse {i} Lehrer1 Email"
+            teacher2_col = f"Klasse {i} Lehrer2 Email"
+            if class_col in new_rows.columns:
+                display_columns.extend([class_col, teacher1_col, teacher2_col])
+
+        print(
+            "Neue Zeilen aus der CSV, die nicht in der XLSX vorhanden sind (inklusive Klassenlehrer-Emails):"
+        )
+        for _, row in new_rows[display_columns].iterrows():
+            print(list(row))
+
+            # Get all teacher emails for this row
+            teacher_emails = []
+            for i in [1, 2, 3]:
+                teacher1_col = f"Klasse {i} Lehrer1 Email"
+                teacher2_col = f"Klasse {i} Lehrer2 Email"
+                if teacher1_col in row and pd.notna(row[teacher1_col]):
+                    teacher_emails.append(row[teacher1_col])
+                if teacher2_col in row and pd.notna(row[teacher2_col]):
+                    teacher_emails.append(row[teacher2_col])
+
+            # Remove duplicates and empty emails
+            teacher_emails = list(set(filter(None, teacher_emails)))
+
+            # Geänderte E-Mail-Logik: Sende an Eltern-E-Mail mit Lehrern im CC
+            if "Emailadresse des Elternteils" in row and pd.notna(row["Emailadresse des Elternteils"]):
+                to_email = row["Emailadresse des Elternteils"]
+                cc_emails = teacher_emails  # Alle Lehrer-E-Mails kommen in CC
+
+                betreff = "Bestätigung: Ihr Elternaccount-Antrag ist eingegangen"
+                message = elternaccounts_credentials.forms_message
+
+                sende_email(
+                    empfaenger_liste=to_email,
+                    betreff=betreff,
+                    nachricht=message,
+                    cc=cc_emails,  # Lehrer als CC statt BCC
+                )
+    else:
+        print(
+            "Spalte 'Zeitstempel' fehlt in einem der Datensätze. Kein Vergleich durchgeführt."
+        )
+
+
 def update_xlsx(csv_path: str, xlsx_path: str) -> None:
     """
     Update an XLSX file with data from a CSV file.
 
-    This function reads data from a specified CSV file and updates an existing XLSX file by merging and 
-    removing duplicate timestamp entries. It also adjusts the column widths of the XLSX file for better 
+    This function reads data from a specified CSV file and updates an existing XLSX file by merging and
+    removing duplicate timestamp entries. It also adjusts the column widths of the XLSX file for better
     readability, and creates a backup of the original XLSX file in a Nextcloud directory.
 
     Args:
@@ -64,6 +204,8 @@ def update_xlsx(csv_path: str, xlsx_path: str) -> None:
     date_string = now.strftime("%y%m%d%H%M%S")
     csv_df = pd.read_csv(csv_path)
     xlsx_df = pd.read_excel(xlsx_path)
+
+    output_missing_csv_rows(csv_df, xlsx_df)
 
     backup_url = f"{webdav_backup[:-5]}_backup{date_string}.xlsx"
     put_file(
@@ -119,8 +261,8 @@ def createElternaccounts(
     """
     Create parental accounts based on form data and Schild CSV export.
 
-    This function processes data from a form XLSX file and a Schild CSV export to generate a CSV file of 
-    parental accounts. It uses a similarity score to match data from both files. The final results are 
+    This function processes data from a form XLSX file and a Schild CSV export to generate a CSV file of
+    parental accounts. It uses a similarity score to match data from both files. The final results are
     stored in an output CSV, along with a separate control CSV for verification purposes.
 
     Args:
@@ -265,8 +407,10 @@ def createElternaccounts(
     # Check for changes compared to previous version
     file_exists = os.path.isfile(outputfile)
     if file_exists:
-        existing_df = pd.read_csv(outputfile, sep=';')
+        existing_df = pd.read_csv(outputfile, sep=";")
         if not existing_df.equals(output_df2):
-            logger.info(f"Änderungen in {outputfile} erkannt - Datei wurde aktualisiert")
-    
+            logger.info(
+                f"Änderungen in {outputfile} erkannt - Datei wurde aktualisiert"
+            )
+
     output_df2.to_csv(outputfile, index=False, sep=";")

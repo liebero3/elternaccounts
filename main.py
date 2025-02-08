@@ -2,7 +2,7 @@
 main.py
 
 This script performs various operations related to updating files, scraping emails, and processing email communication
-for a system managing Elternaccounts (parent accounts). It offers three main options:
+for a system managing Elternaccounts (rent accounts). It offers three main options:
 
 1. Update files with new data by downloading, processing, and uploading the necessary files.
 2. Scrape email addresses from provided data and output them.
@@ -133,6 +133,9 @@ HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
             empfaenger_liste = finde_email_adressen(
                 """
 HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
+Alexander	Scheben	scheben@ish.de	Scheben Lasse	alexsche
+Anastasia	Kuznetsova	akuznetsova239@gmail.com	Mnev Maxim	anaskuzn
+Serkan	Camdereli	s.camdereli@gmail.com	Camdereli Lara	serkcamd
 """
             )
             logger.info(f"Empfänger-Liste: {empfaenger_liste}")
