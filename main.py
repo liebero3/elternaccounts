@@ -40,7 +40,7 @@ def main():
 """
         )
         if user_choice == "1":
-            exportfile = "00-Export20250103.csv"
+            exportfile = "00-Export20250129.csv"
             # API initialisieren
             ncapi = NextcloudFormsAPI(
                 elternaccounts_credentials.server_url,
