@@ -133,9 +133,7 @@ HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
             empfaenger_liste = finde_email_adressen(
                 """
 HIER DEN OUTPUT NACH DEM ERSTELLEN DER ACCOUNTS EINFÜGEN
-Alexander	Scheben	scheben@ish.de	Scheben Lasse	alexsche
-Anastasia	Kuznetsova	akuznetsova239@gmail.com	Mnev Maxim	anaskuzn
-Serkan	Camdereli	s.camdereli@gmail.com	Camdereli Lara	serkcamd
+Mine	Balliu	minef2007@yahoo.com	Balliu Margis, Balliu Arlen	mineball
 """
             )
             logger.info(f"Empfänger-Liste: {empfaenger_liste}")

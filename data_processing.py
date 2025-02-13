@@ -216,9 +216,34 @@ def update_xlsx(csv_path: str, xlsx_path: str) -> None:
     )
 
     csv_df["Kontrolliert"] = pd.NA
-    merged_df = pd.concat([xlsx_df, csv_df], ignore_index=True)
-    merged_df.drop_duplicates(subset="Zeitstempel", keep="first", inplace=True)
-    merged_df.to_excel(xlsx_path, index=False)
+
+    # Modified concatenation logic with proper NA handling
+    dfs = [df for df in [xlsx_df, csv_df] if not df.empty]
+
+    if dfs:
+        # Datentypen des ersten DataFrames als Referenz
+        dtypes = dfs[0].dtypes
+
+        # Konvertiere NA-Werte zu None vor der Typkonvertierung
+        dfs = [df.fillna(pd.NA) for df in dfs]
+
+        # Konvertiere die Datentypen unter Berücksichtigung von NA-Werten
+        converted_dfs = []
+        for df in dfs:
+            converted_df = df.copy()
+            for col, dtype in dtypes.items():
+                if col in converted_df.columns:
+                    if dtype == 'float64':
+                        converted_df[col] = pd.to_numeric(converted_df[col], errors='coerce')
+                    else:
+                        converted_df[col] = converted_df[col].astype(dtype, errors='ignore')
+            converted_dfs.append(converted_df)
+
+        # Führe die DataFrames zusammen
+        merged_df = pd.concat(converted_dfs, ignore_index=True)
+
+        merged_df.drop_duplicates(subset="Zeitstempel", keep="first", inplace=True)
+        merged_df.to_excel(xlsx_path, index=False)
 
     wb = px.load_workbook(xlsx_path)
     ws = wb.active
