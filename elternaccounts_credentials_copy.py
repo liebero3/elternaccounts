@@ -39,3 +39,18 @@ Sollten Sie bereits einen funktionierenden Account haben ignorieren Sie die Mail
 Freundliche Grüße
 Your Name
 """
+
+forms_message ="""Sehr geehrtes Elternteil,
+
+
+wir haben Ihre Online-Registrierung für den Elternaccount erhalten und die Klassenlehrer darüber informiert.
+
+
+Für die finale Aktivierung benötigen die Klassenlehrer noch den unterschriebenen Papierantrag. Falls Sie diesen noch nicht eingereicht haben, können Sie ihn unter [URL zum schriftlichen Antrag] herunterladen oder Ihr Kind kann ihn im Sekretariat abholen.
+
+
+Bitte geben Sie den ausgefüllten Antrag beim Klassenlehrer Ihres Kindes ab. Nach Eingang des Antrags erhalten Sie innerhalb von 7 Tagen eine Bestätigungsmail mit einer Anleitung für den login. Sollte diese Mail ausbleiben, kontaktieren Sie bitte den Klassenlehrer per E-Mail, bei dem Sie den Antrag abgegeben haben.
+
+
+Mit freundlichen Grüßen
+ihr IT-Team vom Luisen-Gymnasium"""
